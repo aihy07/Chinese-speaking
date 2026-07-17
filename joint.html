@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>学生端 - 标准汉语课堂</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, 'Helvetica Neue', sans-serif;
+            background: linear-gradient(145deg, #fdf6f0 0%, #f5e6da 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            width: 100%;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255, 248, 242, 0.92);
+            backdrop-filter: blur(12px);
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(180, 120, 80, 0.18), 0 6px 20px rgba(180, 120, 80, 0.08);
+            padding: 32px 28px 28px;
+            border: 1px solid rgba(255, 235, 220, 0.6);
+            text-align: center;
+        }
+        .header {
+            margin-bottom: 20px;
+        }
+        .header .icon {
+            font-size: 3rem;
+        }
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: #7a4a3a;
+        }
+        .header .sub {
+            color: #a67c6a;
+            font-size: 0.9rem;
+            border-bottom: 2px dashed #ecd7cb;
+            padding-bottom: 12px;
+            margin-top: 4px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            background: #7a4a3a;
+            color: #fff;
+            padding: 2px 18px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .join-form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            margin: 16px 0;
+        }
+        .join-form .row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+        }
+        .join-form input {
+            padding: 12px 18px;
+            border: 2px solid #ecd7cb;
+            border-radius: 40px;
+            font-size: 1rem;
+            background: #fffcf9;
+            outline: none;
+            flex: 1;
+            min-width: 150px;
+        }
+        .join-form input:focus {
+            border-color: #c49a82;
+        }
+        .join-form button {
+            background: #7a4a3a;
+            border: none;
+            color: #fff;
+            padding: 12px 36px;
+            border-radius: 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            box-shadow: 0 4px 12px rgba(122, 74, 58, 0.25);
+        }
+        .join-form button:hover {
+            background: #8f5d4a;
+            transform: translateY(-2px);
+        }
+        .join-form button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .join-message {
+            font-size: 0.95rem;
+            color: #7a5f50;
+            min-height: 28px;
+        }
+        .join-message.success {
+            color: #2d5a1e;
+            font-weight: 600;
+        }
+        .join-message.error {
+            color: #c47a6a;
+            font-weight: 600;
+        }
+
+        .waiting-area {
+            margin: 20px 0;
+            padding: 20px;
+            background: #faf0ea;
+            border-radius: 30px;
+            border: 2px solid #ecd7cb;
+        }
+        .waiting-area .big-icon {
+            font-size: 4rem;
+        }
+        .waiting-area h3 {
+            color: #5a3f33;
+            font-size: 1.4rem;
+            margin: 10px 0;
+        }
+        .waiting-area p {
+            color: #7a5f50;
+        }
+
+        .question-box {
+            background: #faf0ea;
+            border-radius: 30px;
+            padding: 20px;
+            border: 2px solid #ecd7cb;
+            margin: 16px 0;
+        }
+        .question-box .q-title {
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #3f2b21;
+            margin-bottom: 12px;
+        }
+        .question-box .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .question-box .options-grid button {
+            background: #fffcf9;
+            border: 2px solid #ecd7cb;
+            border-radius: 20px;
+            padding: 14px 8px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #3f2b21;
+            cursor: pointer;
+            transition: 0.12s;
+            text-align: center;
+        }
+        .question-box .options-grid button:hover:not(.disabled) {
+            background: #f5e6da;
+            border-color: #c49a82;
+            transform: scale(1.02);
+        }
+        .question-box .options-grid button:active:not(.disabled) {
+            transform: scale(0.96);
+        }
+        .question-box .options-grid button.disabled {
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
+        .question-box .options-grid button.correct {
+            background: #b8d9b0;
+            border-color: #6f9e5e;
+            color: #2d5a1e;
+        }
+        .question-box .options-grid button.wrong {
+            background: #f0c8c0;
+            border-color: #c47a6a;
+            color: #7a3a2a;
+        }
+        .question-box .feedback-text {
+            font-size: 1rem;
+            color: #7a5f50;
+            margin-top: 8px;
+            min-height: 30px;
+        }
+
+        .footer {
+            margin-top: 20px;
+            font-size: 0.75rem;
+            color: #b89a88;
+            border-top: 1px solid #ecd7cb;
+            padding-top: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="card">
+
+            <!-- 头部 -->
+            <div class="header">
+                <div class="icon">🎓</div>
+                <h1>标准汉语课堂</h1>
+                <div class="sub">— 学生端 —</div>
+            </div>
+
+            <!-- 状态 -->
+            <div id="statusBadge" class="status-badge">⏳ 未加入</div>
+
+            <!-- 加入表单（未加入时显示） -->
+            <div id="joinSection">
+                <div class="join-form">
+                    <div class="row">
+                        <input type="text" id="studentNameInput" placeholder="输入你的姓名" maxlength="20" />
+                        <input type="text" id="classCodeInput" placeholder="课堂码（若需要）" maxlength="10" style="max-width:140px;" />
+                    </div>
+                    <button id="joinBtn">加入课堂</button>
+                </div>
+                <div id="joinMessage" class="join-message"></div>
+            </div>
+
+            <!-- 等待区域（已加入，等待教师） -->
+            <div id="waitingArea" class="waiting-area hidden">
+                <div class="big-icon">⏳</div>
+                <h3>等待教师开始答题</h3>
+                <p id="waitingInfo">请等待老师发起答题...</p>
+            </div>
+
+            <!-- 题目区域（答题中） -->
+            <div id="questionArea" class="hidden">
+                <div class="question-box">
+                    <div class="q-title" id="questionDisplay">题目加载中...</div>
+                    <div class="options-grid" id="optionsContainer"></div>
+                    <div class="feedback-text" id="answerFeedback">请选择一个选项</div>
+                </div>
+            </div>
+
+            <!-- 底部 -->
+            <div class="footer">
+                <span>📖 《标准汉语会话360句1》</span><br />
+                <span style="font-size:0.7rem;">扫码加入教师课堂</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // ================================================================
+        //  课堂数据（与教师端共享 localStorage）
+        // ================================================================
+        const CLASSROOM_KEY = 'classroom_data';
+
+        function getClassroomData() {
+            try {
+                return JSON.parse(localStorage.getItem(CLASSROOM_KEY)) || {
+                    students: [],
+                    isActive: false,
+                    currentQuestion: null,
+                    submitted: [],
+                    teacherPage: '',
+                    classCode: '',
+                    codeEnabled: false,
+                };
+            } catch { return { students: [], isActive: false, currentQuestion: null, submitted: [], teacherPage: '',
+                    classCode: '', codeEnabled: false }; }
+        }
+
+        function saveClassroomData(data) {
+            localStorage.setItem(CLASSROOM_KEY, JSON.stringify(data));
+            window.dispatchEvent(new StorageEvent('storage', {
+                key: CLASSROOM_KEY,
+                newValue: JSON.stringify(data)
+            }));
+        }
+
+        // ================================================================
+        //  DOM 引用
+        // ================================================================
+        const studentNameInput = document.getElementById('studentNameInput');
+        const classCodeInput = document.getElementById('classCodeInput');
+        const joinBtn = document.getElementById('joinBtn');
+        const joinMessage = document.getElementById('joinMessage');
+        const statusBadge = document.getElementById('statusBadge');
+        const joinSection = document.getElementById('joinSection');
+        const waitingArea = document.getElementById('waitingArea');
+        const questionArea = document.getElementById('questionArea');
+        const questionDisplay = document.getElementById('questionDisplay');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const answerFeedback = document.getElementById('answerFeedback');
+        const waitingInfo = document.getElementById('waitingInfo');
+
+        let currentStudentName = '';
+
+        // ================================================================
+        //  辅助函数
+        // ================================================================
+        function getCurrentStudent() {
+            return localStorage.getItem('classroom_student_name') || '';
+        }
+
+        function setCurrentStudent(name) {
+            localStorage.setItem('classroom_student_name', name);
+        }
+
+        // ================================================================
+        //  渲染学生端状态
+        // ================================================================
+        function renderStudent() {
+            const data = getClassroomData();
+            const studentName = getCurrentStudent();
+
+            if (!studentName) {
+                // 未加入
+                statusBadge.textContent = '⏳ 未加入';
+                statusBadge.style.background = '#b89a88';
+                joinSection.classList.remove('hidden');
+                waitingArea.classList.add('hidden');
+                questionArea.classList.add('hidden');
+                return;
+            }
+
+            // 已加入
+            statusBadge.textContent = '✅ 已加入：' + studentName;
+            statusBadge.style.background = '#4a7a5a';
+            joinSection.classList.add('hidden');
+
+            // 检查是否在教师的学生列表中（如果不在，可能是被清除了）
+            if (!data.students.includes(studentName)) {
+                // 学生被移出，重置
+                localStorage.removeItem('classroom_student_name');
+                renderStudent();
+                return;
+            }
+
+            // 检查是否已提交
+            const alreadySubmitted = data.submitted.includes(studentName);
+
+            if (data.isActive && data.currentQuestion) {
+                // 答题模式
+                waitingArea.classList.add('hidden');
+                questionArea.classList.remove('hidden');
+                renderQuestion(data.currentQuestion, alreadySubmitted);
+                if (alreadySubmitted) {
+                    answerFeedback.textContent = '✅ 你已提交答案，等待老师结束';
+                    answerFeedback.style.color = '#2d5a1e';
+                } else {
+                    answerFeedback.textContent = '请选择一个选项';
+                    answerFeedback.style.color = '#7a5f50';
+                }
+            } else {
+                // 等待模式
+                waitingArea.classList.remove('hidden');
+                questionArea.classList.add('hidden');
+                if (alreadySubmitted) {
+                    waitingInfo.textContent = '你已提交答案，等待老师结束答题...';
+                } else {
+                    waitingInfo.textContent = '等待老师发起答题...';
+                }
+            }
+        }
+
+        // ================================================================
+        //  渲染题目
+        // ================================================================
+        function renderQuestion(question, alreadySubmitted) {
+            questionDisplay.textContent = question.display || '题目加载中...';
+            optionsContainer.innerHTML = '';
+            if (question.options && question.options.length > 0) {
+                question.options.forEach(opt => {
+                    const btn = document.createElement('button');
+                    btn.textContent = opt;
+                    btn.dataset.value = opt;
+                    if (alreadySubmitted) {
+                        btn.classList.add('disabled');
+                    } else {
+                        btn.addEventListener('click', function() {
+                            submitAnswer(opt);
+                        });
+                    }
+                    optionsContainer.appendChild(btn);
+                });
+            }
+        }
+
+        // ================================================================
+        //  提交答案
+        // ================================================================
+        function submitAnswer(answer) {
+            const studentName = getCurrentStudent();
+            if (!studentName) return;
+
+            const data = getClassroomData();
+            // 检查是否已提交
+            if (data.submitted.includes(studentName)) {
+                answerFeedback.textContent = '你已经提交过了';
+                return;
+            }
+            if (!data.isActive) {
+                answerFeedback.textContent = '答题已结束';
+                return;
+            }
+
+            // 提交
+            data.submitted.push(studentName);
+            saveClassroomData(data);
+
+            // 禁用选项
+            optionsContainer.querySelectorAll('button').forEach(b => b.classList.add('disabled'));
+            answerFeedback.textContent = '✅ 答案已提交！等待老师结束答题。';
+            answerFeedback.style.color = '#2d5a1e';
+        }
+
+        // ================================================================
+        //  加入课堂
+        // ================================================================
+        function joinClass() {
+            const name = studentNameInput.value.trim();
+            const code = classCodeInput.value.trim();
+            if (!name) {
+                joinMessage.textContent = '⚠️ 请输入姓名';
+                joinMessage.className = 'join-message error';
+                return;
+            }
+
+            const data = getClassroomData();
+            // 检查课堂码
+            if (data.codeEnabled && data.classCode) {
+                if (code !== data.classCode) {
+                    joinMessage.textContent = '⚠️ 课堂码错误，请向老师获取正确的课堂码';
+                    joinMessage.className = 'join-message error';
+                    return;
+                }
+            }
+
+            // 检查是否已存在
+            if (data.students.includes(name)) {
+                setCurrentStudent(name);
+                joinMessage.textContent = '👋 欢迎回来，' + name + '！';
+                joinMessage.className = 'join-message success';
+                renderStudent();
+                return;
+            }
+
+            // 加入
+            data.students.push(name);
+            saveClassroomData(data);
+            setCurrentStudent(name);
+            joinMessage.textContent = '✅ 加入成功！等待老师开始答题...';
+            joinMessage.className = 'join-message success';
+            studentNameInput.value = '';
+            classCodeInput.value = '';
+            renderStudent();
+        }
+
+        // ================================================================
+        //  监听数据变化（其他标签页修改数据时刷新）
+        // ================================================================
+        window.addEventListener('storage', function(e) {
+            if (e.key === CLASSROOM_KEY) {
+                renderStudent();
+            }
+        });
+
+        // ================================================================
+        //  定时轮询（增强实时性）
+        // ================================================================
+        setInterval(() => {
+            renderStudent();
+        }, 3000);
+
+        // ================================================================
+        //  事件绑定
+        // ================================================================
+        joinBtn.addEventListener('click', joinClass);
+        studentNameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') joinClass();
+        });
+        classCodeInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') joinClass();
+        });
+
+        // ================================================================
+        //  初始化
+        // ================================================================
+        renderStudent();
+        console.log('🎓 学生端已启动，等待加入课堂。');
+    </script>
+
+</body>
+</html>
