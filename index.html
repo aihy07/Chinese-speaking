@@ -1201,79 +1201,81 @@
 
     // ---- 同步题目到 MQTT（完整构建） ----
     function syncQuestionToMQTT() {
-        if (!mqttConnected) {
-            syncFeedback.textContent = '⚠️ MQTT 未连接，请先连接';
-            return;
-        }
-        const q = state.questions[state.currentIndex];
-        if (!q) {
-            syncFeedback.textContent = '⚠️ 当前没有题目，请先进入练习';
-            return;
-        }
-        let questionObj = {
-            display: '',
-            options: [],
-            sentence: '',
-            audioText: '',
-            correctAnswer: '',
-        };
-
-        // 根据题型填充
-        if (q.type === 'lesson1') {
-            if (q.displayType === 'char') {
-                questionObj.display = q.display;
-            } else if (q.displayType === 'audio_only') {
-                questionObj.display = q.exercise === 'listen2tone' ? '🔊 听发音，选择正确的声调符号' : '🔊 听发音，选择正确的拼音';
-            }
-            if (q.exercise === 'listen2tone') {
-                const symbols = { 1: 'ˉ', 2: 'ˊ', 3: 'ˇ', 4: 'ˋ' };
-                questionObj.options = q.options.map(opt => symbols[opt] || opt);
-            } else {
-                questionObj.options = q.options || [];
-                console.log('📤 推送题目:', JSON.stringify(questionObj));
-            }
-            questionObj.correctAnswer = q.correctAnswer;
-            questionObj.audioText = q.audioText || q.correct?.text || '';
-            questionObj.sentence = '';
-        } else if (q.type === 'vocab_match' || q.type === 'vocab_listen' || q.type === 'vocab_fill' ||
-            q.type === 'grammar_spot' || q.type === 'grammar_picture') {
-            questionObj.display = q.display;
-            questionObj.options = q.options;
-            questionObj.correctAnswer = q.correctAnswer;
-            questionObj.audioText = q.audioText || '';
-            questionObj.sentence = '';
-        } else if (q.type === 'listen_repeat') {
-            questionObj.display = '👂 听句子，然后跟读复述';
-            questionObj.options = [];
-            questionObj.correctAnswer = q.correctAnswer || '';
-            questionObj.audioText = q.sentence || '';
-            questionObj.sentence = q.sentence || '';
-        }
-
-        // 确保携带完整信息
-        questionObj.audioText = questionObj.audioText || q.audioText || q.sentence || '';
-        questionObj.sentence = q.sentence || '';
-
-        try {
-            const msg = new Paho.MQTT.Message(JSON.stringify(questionObj));
-            msg.destinationName = TOPIC_TEACHER_QUESTION;
-            mqttClient.send(msg);
-            syncStatus.textContent = '✅ 已同步';
-            syncStatus.style.color = '#2d5a1e';
-            syncFeedback.textContent = '📝 题目已发送，等待学生作答...';
-            submittedStudents = [];
-            // 禁用下一题，等待提交完成
-            if (nextBtn) {
-                nextBtn.disabled = true;
-                nextBtn.textContent = '⏳ 等待学生提交...';
-            }
-            syncActive = true; // 进入自动同步模式
-            updateTeacherControl();
-        } catch (e) {
-            syncFeedback.textContent = '⚠️ 发送失败：' + e.message;
-        }
+    if (!mqttConnected) {
+        syncFeedback.textContent = '⚠️ MQTT 未连接，请先连接';
+        return;
     }
+    const q = state.questions[state.currentIndex];
+    if (!q) {
+        syncFeedback.textContent = '⚠️ 当前没有题目，请先进入练习';
+        return;
+    }
+    let questionObj = {
+        display: '',
+        options: [],
+        sentence: '',
+        audioText: '',
+        correctAnswer: '',
+    };
 
+    // 根据题型填充
+    if (q.type === 'lesson1') {
+        if (q.displayType === 'char') {
+            questionObj.display = q.display;
+        } else if (q.displayType === 'audio_only') {
+            questionObj.display = q.exercise === 'listen2tone' ? '🔊 听发音，选择正确的声调符号' : '🔊 听发音，选择正确的拼音';
+        }
+        if (q.exercise === 'listen2tone') {
+            const symbols = { 1: 'ˉ', 2: 'ˊ', 3: 'ˇ', 4: 'ˋ' };
+            questionObj.options = q.options.map(opt => symbols[opt] || opt);
+        } else {
+            questionObj.options = q.options || [];
+        }
+        questionObj.correctAnswer = q.correctAnswer;
+        questionObj.audioText = q.audioText || q.correct?.text || '';
+        questionObj.sentence = '';
+    } else if (q.type === 'vocab_match' || q.type === 'vocab_listen' || q.type === 'vocab_fill' ||
+    // 生词配对：不加音频
+    questionObj.display = q.display;
+    questionObj.options = q.options || [];
+    questionObj.correctAnswer = q.correctAnswer;
+    questionObj.audioText = '';   // 强制为空
+    questionObj.sentence = '';
+} else if (q.type === 'vocab_listen' || q.type === 'vocab_fill' ||
+    q.type === 'grammar_spot' || q.type === 'grammar_picture') {
+    // 其他题型保留音频
+    questionObj.display = q.display;
+    questionObj.options = q.options || [];
+    questionObj.correctAnswer = q.correctAnswer;
+    questionObj.audioText = q.audioText || '';
+    questionObj.sentence = '';
+}
+
+    // 确保携带完整信息
+    questionObj.audioText = questionObj.audioText || q.audioText || q.sentence || '';
+    questionObj.sentence = q.sentence || '';
+
+    // 调试日志（查看推送内容）
+    console.log('📤 推送题目:', JSON.stringify(questionObj));
+
+    try {
+        const msg = new Paho.MQTT.Message(JSON.stringify(questionObj));
+        msg.destinationName = TOPIC_TEACHER_QUESTION;
+        mqttClient.send(msg);
+        syncStatus.textContent = '✅ 已同步';
+        syncStatus.style.color = '#2d5a1e';
+        syncFeedback.textContent = '📝 题目已发送，等待学生作答...';
+        submittedStudents = [];
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.textContent = '⏳ 等待学生提交...';
+        }
+        syncActive = true;
+        updateTeacherControl();
+    } catch (e) {
+        syncFeedback.textContent = '⚠️ 发送失败：' + e.message;
+    }
+}
     // ---- 渲染题目 ----
     function renderQuestion() {
         const q = state.questions[state.currentIndex];
