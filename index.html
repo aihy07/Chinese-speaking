@@ -492,7 +492,7 @@
         { sentence: '你 _____ ？', answer: '呢', options: ['呢', '吗', '吧'], translation: 'How about you?' },
         { sentence: '您的电话号码 _____ 多少？', answer: '是', options: ['是', '有', '叫'], translation: 'What is your phone number?' },
         { sentence: '您的邮箱 _____ 什么？', answer: '是', options: ['是', '很', '叫'], translation: 'What is your email?' },
-        { sentence: '这个是我____书。', answer: '是', options: ['是', '的', '很'], translation: 'This is my book.' },
+        { sentence: '这个是我____书。', answer: '的', options: ['是', '的', '很'], translation: 'This is my book.' },
         { sentence: '她 _____ 我的老师。', answer: '是', options: ['是', '有', '叫'], translation: 'She is my teacher.' },
         { sentence: '你 _____ 哪国人？', answer: '是', options: ['是', '有', '叫'], translation: 'Which country are you from?' },
         { sentence: '你叫什么 _____ ？', answer: '名字', options: ['名字', '邮箱', '电话'], translation: 'What is your name?' },
@@ -1229,7 +1229,8 @@
                 const symbols = { 1: 'ˉ', 2: 'ˊ', 3: 'ˇ', 4: 'ˋ' };
                 questionObj.options = q.options.map(opt => symbols[opt] || opt);
             } else {
-                questionObj.options = q.options;
+                questionObj.options = q.options || [];
+                console.log('📤 推送题目:', JSON.stringify(questionObj));
             }
             questionObj.correctAnswer = q.correctAnswer;
             questionObj.audioText = q.audioText || q.correct?.text || '';
