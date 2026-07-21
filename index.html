@@ -447,10 +447,10 @@
         { sentence: '她漂亮很。', correct: '她很漂亮。', error: '语序错误' },
         { sentence: '这个好吃很。', correct: '这个很好吃。', error: '语序错误' },
         { sentence: '我是很饿。', correct: '我很饿。', error: '误用"是"' },
-        { sentence: '我不很累。', correct: '我很不累。', error: '否定词位置不当' },
-        { sentence: '你是很忙吗？', correct: '你很忙吗？', error: '误用"是"' },
-        { sentence: '他是很帅吗？', correct: '他很帅吗？', error: '误用"是"' },
-        { sentence: '你很累吗？', correct: '你很累吗？', error: '无错误' },
+        { sentence: '我不很累。', correct: '我不累。', error: '误用"很"' },
+        { sentence: '你很忙吗？', correct: '你忙吗？', error: '误用"很"' },
+        { sentence: '他是帅吗？', correct: '他帅吗？', error: '误用"是"' },
+        { sentence: '你很累吗？', correct: '你累吗？', error: '误用"很"' },
         { sentence: '他帅吗？', correct: '他帅吗？', error: '无错误' },
         { sentence: '我不饿。', correct: '我不饿。', error: '无错误' },
         { sentence: '你好吗？', correct: '你好吗？', error: '无错误' },
@@ -486,19 +486,19 @@
         { chinese: '邮箱', pinyin: 'yóuxiāng', english: 'email' },
     ];
     const FILL_BLANK_SENTENCES_L3 = [
-        { sentence: '你 _____ 什么名字？', answer: '叫', options: ['叫', '是', '有'], translation: 'What is your name?' },
-        { sentence: '你是哪 _____ 人？', answer: '国', options: ['国', '个', '位'], translation: 'Which country are you from?' },
+        { sentence: '你 _____ 什么名字？', answer: '叫', options: ['叫', '是', '也'], translation: 'What is your name?' },
+        { sentence: '你是哪 _____ 人？', answer: '国', options: ['国', '个', '很'], translation: 'Which country are you from?' },
         { sentence: '你 _____ ？', answer: '呢', options: ['呢', '吗', '吧'], translation: 'How about you?' },
         { sentence: '您的电话号码 _____ 多少？', answer: '是', options: ['是', '有', '叫'], translation: 'What is your phone number?' },
         { sentence: '您的邮箱 _____ 什么？', answer: '是', options: ['是', '有', '叫'], translation: 'What is your email?' },
-        { sentence: '这个 _____ 我的书。', answer: '是', options: ['是', '有', '叫'], translation: 'This is my book.' },
-        { sentence: '她 _____ 我的老师。', answer: '是', options: ['是', '有', '叫'], translation: 'She is my teacher.' },
-        { sentence: '你 _____ 哪国人？', answer: '是', options: ['是', '有', '叫'], translation: 'Which country are you from?' },
+        { sentence: '这个 _____ 我的邮箱。', answer: '是', options: ['是', '有', '叫'], translation: 'This is my email.' },
+        { sentence: '她是我_____老师。', answer: '的', options: ['是', '的', '叫'], translation: 'She is my teacher.' },
+        { sentence: '你是_____国人？', answer: '是', options: ['什么', '哪', '吗'], translation: 'Which country are you from?' },
         { sentence: '你叫什么 _____ ？', answer: '名字', options: ['名字', '手机', '电话'], translation: 'What is your name?' },
-        { sentence: '你是 _____ 国人？', answer: '哪', options: ['哪', '什么', '哪个'], translation: 'Which country are you from?' },
-        { sentence: '你的 _____ 号码是多少？', answer: '电话', options: ['电话', '手机', '邮箱'], translation: 'What is your phone number?' },
-        { sentence: '你的 _____ 是什么？', answer: '邮箱', options: ['邮箱', '电话', '手机'], translation: 'What is your email?' },
-        { sentence: '你叫 _____ 名字？', answer: '什么', options: ['什么', '哪个', '国'], translation: 'What is your name?' },
+        { sentence: '你_____哪国人？', answer: '是', options: ['是', '很', '不'], translation: 'Which country are you from?' },
+        { sentence: '你的 _____ 号码是多少？', answer: '电话', options: ['电话', '名字', '邮箱'], translation: 'What is your phone number?' },
+        { sentence: '你的 _____ 是什么？', answer: '邮箱', options: ['邮箱', '电话', '名字'], translation: 'What is your email?' },
+        { sentence: '你叫 _____ 名字？', answer: '什么', options: ['什么', '哪', '呢'], translation: 'What is your name?' },
     ];
     const SPOT_ERRORS_L3 = [
         { sentence: '你叫什么名字吗？', correct: '你叫什么名字？', error: '误用"吗"' },
@@ -1199,23 +1199,84 @@
 
     // ---- 同步题目到 MQTT（完整构建） ----
     function syncQuestionToMQTT() {
-        if (!mqttConnected) {
-            syncFeedback.textContent = '⚠️ MQTT 未连接，请先连接';
-            return;
-        }
-        const q = state.questions[state.currentIndex];
-        if (!q) {
-            syncFeedback.textContent = '⚠️ 当前没有题目，请先进入练习';
-            return;
-        }
-        let questionObj = {
-            display: '',
-            options: [],
-            sentence: '',
-            audioText: '',
-            correctAnswer: '',
-        };
+    if (!mqttConnected) {
+        syncFeedback.textContent = '⚠️ MQTT 未连接，请先连接';
+        return;
+    }
+    const q = state.questions[state.currentIndex];
+    if (!q) {
+        syncFeedback.textContent = '⚠️ 当前没有题目，请先进入练习';
+        return;
+    }
+    let questionObj = {
+        display: '',
+        options: [],
+        sentence: '',
+        audioText: '',
+        correctAnswer: '',
+    };
 
+    // 原有填充逻辑（保持不变）
+    if (q.type === 'lesson1') {
+        if (q.displayType === 'char') {
+            questionObj.display = q.display;
+        } else if (q.displayType === 'audio_only') {
+            questionObj.display = q.exercise === 'listen2tone' ? '🔊 听发音，选择正确的声调符号' : '🔊 听发音，选择正确的拼音';
+        }
+        if (q.exercise === 'listen2tone') {
+            const symbols = { 1: 'ˉ', 2: 'ˊ', 3: 'ˇ', 4: 'ˋ' };
+            questionObj.options = q.options.map(opt => symbols[opt] || opt);
+        } else {
+            questionObj.options = q.options || [];
+        }
+        questionObj.correctAnswer = q.correctAnswer;
+        questionObj.audioText = q.audioText || q.correct?.text || '';
+        questionObj.sentence = '';
+    } else if (q.type === 'vocab_match' || q.type === 'vocab_listen' || q.type === 'vocab_fill' ||
+        q.type === 'grammar_spot' || q.type === 'grammar_picture') {
+        questionObj.display = q.display;
+        questionObj.options = q.options || [];
+        questionObj.correctAnswer = q.correctAnswer;
+        questionObj.audioText = q.audioText || '';
+        questionObj.sentence = '';
+    } else if (q.type === 'listen_repeat') {
+        questionObj.display = '👂 听句子，然后跟读复述';
+        questionObj.options = [];
+        questionObj.correctAnswer = q.correctAnswer || '';
+        questionObj.audioText = q.sentence || '';
+        questionObj.sentence = q.sentence || '';
+    }
+
+    // **关键修复：确保 options 是数组**
+    if (!Array.isArray(questionObj.options)) {
+        questionObj.options = [];
+    }
+
+    // 确保携带音频和句子
+    questionObj.audioText = questionObj.audioText || q.audioText || q.sentence || '';
+    questionObj.sentence = q.sentence || '';
+
+    // 调试：打印推送内容（可在浏览器控制台查看）
+    console.log('📤 推送题目:', questionObj);
+
+    try {
+        const msg = new Paho.MQTT.Message(JSON.stringify(questionObj));
+        msg.destinationName = TOPIC_TEACHER_QUESTION;
+        mqttClient.send(msg);
+        syncStatus.textContent = '✅ 已同步';
+        syncStatus.style.color = '#2d5a1e';
+        syncFeedback.textContent = '📝 题目已发送，等待学生作答...';
+        submittedStudents = [];
+        if (nextBtn) {
+            nextBtn.disabled = true;
+            nextBtn.textContent = '⏳ 等待学生提交...';
+        }
+        syncActive = true;
+        updateTeacherControl();
+    } catch (e) {
+        syncFeedback.textContent = '⚠️ 发送失败：' + e.message;
+    }
+}
         // 根据题型填充
         if (q.type === 'lesson1') {
             if (q.displayType === 'char') {
