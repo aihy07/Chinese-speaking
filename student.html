@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>标准汉语 · 学生端</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.js">
+    </script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', 'PingFang SC', Roboto, sans-serif;
+            background: linear-gradient(145deg, #fdf6f0 0%, #f5e6da 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .card {
+            background: rgba(255, 248, 242, 0.9);
+            backdrop-filter: blur(12px);
+            border-radius: 40px;
+            box-shadow: 0 20px 60px rgba(180, 120, 80, 0.18), 0 6px 20px rgba(180, 120, 80, 0.08);
+            padding: 32px 30px 28px;
+            border: 1px solid rgba(255, 235, 220, 0.6);
+        }
+        .page {
+            display: none;
+        }
+        .page.active {
+            display: block;
+        }
+        .global-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+            padding: 8px 16px;
+            background: rgba(255, 248, 242, 0.6);
+            border-radius: 60px;
+            border: 1px solid rgba(255, 235, 220, 0.8);
+        }
+        .global-toolbar .brand {
+            font-weight: 700;
+            color: #7a4a3a;
+            font-size: 1.2rem;
+        }
+        .global-toolbar .status {
+            font-size: 0.85rem;
+            color: #7a5f50;
+        }
+        .join-area {
+            text-align: center;
+            padding: 20px 0;
+        }
+        .join-area h2 {
+            color: #7a4a3a;
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+        .join-area p {
+            color: #a67c6a;
+            margin-bottom: 20px;
+        }
+        .join-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            align-items: center;
+        }
+        .join-form input {
+            padding: 12px 20px;
+            border: 2px solid #ecd7cb;
+            border-radius: 30px;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 280px;
+            background: #fffcf9;
+            outline: none;
+        }
+        .join-form input:focus {
+            border-color: #c49a82;
+        }
+        .join-form button {
+            background: #7a4a3a;
+            border: none;
+            color: #fff;
+            padding: 12px 32px;
+            border-radius: 60px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+            width: 100%;
+            max-width: 200px;
+        }
+        .join-form button:hover {
+            background: #8f5d4a;
+            transform: translateY(-2px);
+        }
+        .join-msg {
+            margin-top: 12px;
+            font-size: 1rem;
+            min-height: 24px;
+            color: #7a5f50;
+        }
+        .join-msg.success {
+            color: #2d5a1e;
+            font-weight: 600;
+        }
+        .question-area {
+            text-align: center;
+            padding: 20px 0 12px;
+            min-height: 120px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .question-area .display-text {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: #3f2b21;
+            margin-bottom: 8px;
+        }
+        .question-area .display-char {
+            font-size: 4.8rem;
+            font-weight: 700;
+            color: #3f2b21;
+        }
+        .question-area .hint-text {
+            font-size: 1rem;
+            color: #a67c6a;
+            margin-top: 6px;
+        }
+        .audio-btn {
+            background: #7a4a3a;
+            border: none;
+            color: #fff;
+            font-size: 2.6rem;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.15s;
+            box-shadow: 0 6px 20px rgba(122, 74, 58, 0.30);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .audio-btn:hover {
+            transform: scale(1.06);
+            background: #8f5d4a;
+        }
+        .audio-btn:active {
+            transform: scale(0.94);
+        }
+        .audio-btn.playing {
+            animation: pulse 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(122, 74, 58, 0.5);
+            }
+            100% {
+                box-shadow: 0 0 0 20px rgba(122, 74, 58, 0);
+            }
+        }
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+            margin: 18px 0 12px;
+        }
+        .options-grid .opt-btn {
+            background: #fffcf9;
+            border: 2px solid #ecd7cb;
+            border-radius: 20px;
+            padding: 16px 8px;
+            font-size: 1.3rem;
+            font-weight: 600;
+            color: #3f2b21;
+            cursor: pointer;
+            transition: all 0.12s;
+            text-align: center;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.02);
+        }
+        .options-grid .opt-btn:hover:not(.disabled) {
+            background: #f5e6da;
+            border-color: #c49a82;
+            transform: scale(1.02);
+        }
+        .options-grid .opt-btn:active:not(.disabled) {
+            transform: scale(0.96);
+        }
+        .options-grid .opt-btn.disabled {
+            cursor: default;
+            opacity: 0.7;
+        }
+        .options-grid .opt-btn.selected-correct {
+            background: #b8d9b0;
+            border-color: #6f9e5e;
+            color: #2d5a1e;
+        }
+        .options-grid .opt-btn.selected-wrong {
+            background: #f0c8c0;
+            border-color: #c47a6a;
+            color: #7a3a2a;
+        }
+        .feedback {
+            margin: 16px 0 10px;
+            padding: 14px 20px;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            font-weight: 500;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 4px;
+            text-align: center;
+            background: #faf0ea;
+            border: 1px solid #ecd7cb;
+        }
+        .feedback.correct {
+            background: #e8f5e3;
+            border-color: #b8d9b0;
+        }
+        .feedback.wrong {
+            background: #fae8e3;
+            border-color: #f0c8c0;
+        }
+        .feedback .meaning {
+            font-weight: 400;
+            font-size: 0.95rem;
+            color: #7a5f50;
+        }
+        .input-area {
+            margin: 16px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        .input-area input {
+            padding: 12px 20px;
+            border: 2px solid #ecd7cb;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            width: 100%;
+            max-width: 300px;
+            background: #fffcf9;
+            outline: none;
+        }
+        .input-area input:focus {
+            border-color: #c49a82;
+        }
+        .input-area button {
+            background: #7a4a3a;
+            border: none;
+            color: #fff;
+            padding: 10px 30px;
+            border-radius: 60px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.15s;
+        }
+        .input-area button:hover {
+            background: #8f5d4a;
+        }
+        .next-btn {
+            background: #7a4a3a;
+            border: none;
+            color: #fff;
+            font-size: 1.1rem;
+            font-weight: 600;
+            padding: 14px 34px;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.15s;
+            margin-top: 6px;
+            box-shadow: 0 4px 14px rgba(122, 74, 58, 0.25);
+            width: 100%;
+            max-width: 200px;
+        }
+        .next-btn:hover {
+            background: #8f5d4a;
+            transform: translateY(-2px);
+        }
+        .next-btn:active {
+            transform: scale(0.96);
+        }
+        .next-btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        .result-box {
+            text-align: center;
+            padding: 30px 10px 10px;
+        }
+        .result-box .big-icon {
+            font-size: 5rem;
+        }
+        .result-box .result-title {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #3f2b21;
+            margin: 8px 0;
+        }
+        .result-box .result-score {
+            font-size: 3.6rem;
+            font-weight: 800;
+            color: #7a4a3a;
+        }
+        .result-box .result-detail {
+            color: #7a5f50;
+            font-size: 1.1rem;
+            margin: 4px 0 18px;
+        }
+        .result-box .result-stars {
+            font-size: 2.8rem;
+            letter-spacing: 6px;
+            margin: 4px 0 14px;
+        }
+        .hidden {
+            display: none !important;
+        }
+        .flex-center {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mt-8 {
+            margin-top: 8px;
+        }
+        .student-info {
+            background: #f5e6da;
+            border-radius: 30px;
+            padding: 10px 20px;
+            margin-bottom: 16px;
+            text-align: center;
+            font-weight: 600;
+            color: #5a3f33;
+        }
+        .student-info span {
+            color: #7a4a3a;
+        }
+        .point-badge {
+            display: inline-block;
+            background: #7a4a3a;
+            color: #fff;
+            padding: 2px 14px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            margin-left: 8px;
+        }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <!-- 全局工具栏 -->
+    <div class="global-toolbar">
+        <div class="brand">📖 标准汉语 <small>学生端</small></div>
+        <div class="status" id="mqttStatus">MQTT: 未连接</div>
+    </div>
+
+    <!-- ======== 加入课堂页面 ======== -->
+    <div id="joinPage" class="page active">
+        <div class="card">
+            <div class="join-area">
+                <h2>📲 加入课堂</h2>
+                <p>输入姓名和课堂码（如需要）加入老师发起的练习</p>
+                <div class="join-form">
+                    <input type="text" id="studentNameInput" placeholder="你的姓名" maxlength="20" />
+                    <input type="text" id="classCodeInput" placeholder="课堂码（选填）" maxlength="10" />
+                    <button id="joinBtn">加入课堂</button>
+                </div>
+                <div id="joinMsg" class="join-msg">💡 输入姓名后点击加入</div>
+                <div style="margin-top:16px;font-size:0.85rem;color:#a67c6a;">
+                    <span id="studentPointsDisplay">当前积分：0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======== 练习页面 ======== -->
+    <div id="practicePage" class="page">
+        <div class="card">
+            <div class="student-info">
+                👤 当前学生：<span id="displayStudentName">——</span>
+                <span class="point-badge" id="displayStudentPoints">积分：0</span>
+            </div>
+
+            <div class="question-area" id="questionArea">
+                <div class="hint-text">等待教师发送题目...</div>
+            </div>
+            <div class="options-grid" id="optionsGrid"></div>
+            <div class="input-area hidden" id="inputArea">
+                <input type="text" id="inputAnswer" placeholder="输入你的答案" />
+                <button id="submitInputBtn">提交答案</button>
+            </div>
+            <div class="feedback" id="feedbackArea">💡 等待题目</div>
+            <div class="flex-center mt-8">
+                <button class="next-btn" id="nextBtn" disabled>等待下一题</button>
+            </div>
+            <div id="resultArea" class="result-box hidden">
+                <div class="big-icon" id="resultIcon">🎉</div>
+                <div class="result-title" id="resultTitle">完成！</div>
+                <div class="result-stars" id="resultStars">⭐⭐⭐</div>
+                <div class="result-score" id="resultScore">10 / 10</div>
+                <div class="result-detail" id="resultDetail">太棒了！</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ================================================================
+    //  学生端 JavaScript（修复提交按钮重置问题）
+    // ================================================================
+
+    // ---- MQTT 配置 ----
+    const MQTT_BROKER = 'wss://74a61de0e9c042f9aba1355a9edf8acd.s1.eu.hivemq.cloud:8884/mqtt';
+    const MQTT_USER = 'aihuayu';
+    const MQTT_PASSWORD = 'Huyu6180';
+    const TOPIC_TEACHER_QUESTION = 'classroom/teacher/question';
+    const TOPIC_STUDENT_ANSWER = 'classroom/student/answer';
+    const TOPIC_STUDENT_JOIN = 'classroom/student/join';
+
+    let mqttClient = null;
+    let mqttConnected = false;
+    let studentName = '';
+    let currentQuestion = null;
+    let answered = false;
+
+    // ---- DOM 引用 ----
+    const joinPage = document.getElementById('joinPage');
+    const practicePage = document.getElementById('practicePage');
+    const studentNameInput = document.getElementById('studentNameInput');
+    const classCodeInput = document.getElementById('classCodeInput');
+    const joinBtn = document.getElementById('joinBtn');
+    const joinMsg = document.getElementById('joinMsg');
+    const displayStudentName = document.getElementById('displayStudentName');
+    const displayStudentPoints = document.getElementById('displayStudentPoints');
+    const studentPointsDisplay = document.getElementById('studentPointsDisplay');
+    const questionArea = document.getElementById('questionArea');
+    const optionsGrid = document.getElementById('optionsGrid');
+    const inputArea = document.getElementById('inputArea');
+    const inputAnswer = document.getElementById('inputAnswer');
+    const submitInputBtn = document.getElementById('submitInputBtn');
+    const feedbackArea = document.getElementById('feedbackArea');
+    const nextBtn = document.getElementById('nextBtn');
+    const resultArea = document.getElementById('resultArea');
+    const resultIcon = document.getElementById('resultIcon');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultStars = document.getElementById('resultStars');
+    const resultScore = document.getElementById('resultScore');
+    const resultDetail = document.getElementById('resultDetail');
+    const mqttStatus = document.getElementById('mqttStatus');
+
+    // ---- 积分管理 ----
+    function getStudentPoints(name) {
+        try {
+            const students = JSON.parse(localStorage.getItem('pinyin_students')) || [];
+            const s = students.find(st => st.name === name);
+            return s ? s.points : 0;
+        } catch { return 0; }
+    }
+    function updatePointsDisplay() {
+        if (!studentName) return;
+        const points = getStudentPoints(studentName);
+        displayStudentPoints.textContent = `积分：${points}`;
+        studentPointsDisplay.textContent = `当前积分：${points}`;
+    }
+
+    // ---- MQTT 连接 ----
+    function connectMQTT() {
+        if (mqttClient && mqttClient.isConnected()) {
+            updateMQTTStatus(true);
+            return;
+        }
+        const clientId = 'student_' + Math.random().toString(16).substr(2, 8);
+        mqttClient = new Paho.MQTT.Client(MQTT_BROKER, clientId);
+        const options = {
+            userName: MQTT_USER,
+            password: MQTT_PASSWORD,
+            useSSL: true,
+            onSuccess: function() {
+                console.log('学生端 MQTT 连接成功');
+                mqttConnected = true;
+                mqttClient.subscribe(TOPIC_TEACHER_QUESTION);
+                updateMQTTStatus(true);
+                joinMsg.textContent = '✅ MQTT 已连接，等待教师发送题目...';
+                joinMsg.className = 'join-msg success';
+            },
+            onFailure: function(err) {
+                console.error('学生端 MQTT 连接失败:', err);
+                mqttConnected = false;
+                updateMQTTStatus(false);
+                joinMsg.textContent = '⚠️ MQTT 连接失败，请刷新重试';
+                joinMsg.className = 'join-msg';
+            }
+        };
+        mqttClient.onMessageArrived = function(message) {
+            if (message.destinationName === TOPIC_TEACHER_QUESTION) {
+                try {
+                    const data = JSON.parse(message.payloadString);
+                    handleQuestion(data);
+                } catch (e) {
+                    console.warn('解析题目消息失败:', e);
+                }
+            }
+        };
+        mqttClient.connect(options);
+        setTimeout(() => {
+            if (!mqttConnected) {
+                updateMQTTStatus(false);
+                joinMsg.textContent = '⚠️ MQTT 连接超时，请刷新重试';
+            }
+        }, 5000);
+    }
+
+    function updateMQTTStatus(connected) {
+        mqttStatus.textContent = connected ? 'MQTT: 已连接 ✅' : 'MQTT: 未连接 ❌';
+        mqttStatus.style.color = connected ? '#2d5a1e' : '#c47a6a';
+    }
+
+    // ---- 处理收到的题目 ----
+    function handleQuestion(data) {
+        if (!studentName) return;
+        currentQuestion = data;
+        answered = false;
+        resultArea.classList.add('hidden');
+        nextBtn.disabled = true;
+        nextBtn.textContent = '等待提交...';
+
+        // 渲染题目
+        let displayHtml = '';
+        if (data.display) {
+            displayHtml = `<div class="display-text">${data.display}</div>`;
+        }
+        if (data.audioText) {
+            displayHtml += `<button class="audio-btn" id="playAudioBtn" title="点击播放发音">🔊</button>`;
+        }
+        questionArea.innerHTML = displayHtml;
+
+        // 播放音频
+        const audioBtn = document.getElementById('playAudioBtn');
+        if (audioBtn && data.audioText) {
+            audioBtn.addEventListener('click', function() {
+                if (window.speechSynthesis) {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(data.audioText);
+                    utterance.lang = 'zh-CN';
+                    utterance.rate = 0.7;
+                    utterance.pitch = 1.0;
+                    utterance.volume = 1;
+                    utterance.onend = () => { this.classList.remove('playing'); };
+                    utterance.onerror = () => { this.classList.remove('playing'); };
+                    this.classList.add('playing');
+                    window.speechSynthesis.speak(utterance);
+                } else {
+                    alert('您的浏览器不支持语音合成');
+                }
+            });
+        }
+
+        // 判断输入模式还是选择题
+        const isInputMode = data.isInputMode || false;
+        if (isInputMode) {
+            inputArea.classList.remove('hidden');
+            optionsGrid.innerHTML = '';
+            feedbackArea.className = 'feedback';
+            feedbackArea.innerHTML = '💡 听音频或看提示，在输入框中作答';
+            inputAnswer.value = '';
+            submitInputBtn.disabled = false;   // 确保启用
+        } else {
+            inputArea.classList.add('hidden');
+            if (data.options && data.options.length > 0) {
+                let optionsHtml = data.options.map(opt => {
+                    return `<button class="opt-btn" data-value="${opt}">${opt}</button>`;
+                }).join('');
+                optionsGrid.innerHTML = optionsHtml;
+                optionsGrid.querySelectorAll('.opt-btn').forEach(btn => {
+                    btn.addEventListener('click', function() {
+                        if (answered) return;
+                        selectOption(this, data);
+                    });
+                });
+                feedbackArea.className = 'feedback';
+                feedbackArea.innerHTML = '💡 选择一个选项';
+            } else {
+                optionsGrid.innerHTML = '';
+                feedbackArea.className = 'feedback';
+                feedbackArea.innerHTML = '⚠️ 题目格式错误，请联系教师';
+            }
+        }
+    }
+
+    // ---- 选择题作答 ----
+    function selectOption(btn, data) {
+        if (answered) return;
+        const selectedValue = btn.dataset.value;
+        const isCorrect = (selectedValue === data.correctAnswer);
+
+        answered = true;
+        optionsGrid.querySelectorAll('.opt-btn').forEach(b => {
+            b.classList.add('disabled');
+        });
+        optionsGrid.querySelectorAll('.opt-btn').forEach(b => {
+            if (b.dataset.value === data.correctAnswer) {
+                b.classList.add('selected-correct');
+            }
+        });
+        if (!isCorrect) {
+            btn.classList.add('selected-wrong');
+        }
+
+        if (isCorrect) {
+            feedbackArea.className = 'feedback correct';
+            feedbackArea.innerHTML = `✅ 回答正确！${data.meaning ? ' · ' + data.meaning : ''}`;
+        } else {
+            feedbackArea.className = 'feedback wrong';
+            feedbackArea.innerHTML = `❌ 回答错误。正确答案：${data.correctAnswer}`;
+        }
+
+        submitAnswer(selectedValue);
+        nextBtn.disabled = false;
+        nextBtn.textContent = '等待下一题';
+    }
+
+    // ---- 输入模式提交 ----
+    submitInputBtn.addEventListener('click', function() {
+        if (answered) return;
+        const answer = inputAnswer.value.trim();
+        if (!answer) {
+            feedbackArea.className = 'feedback';
+            feedbackArea.innerHTML = '⚠️ 请输入答案';
+            return;
+        }
+        const data = currentQuestion;
+        if (!data) return;
+        const isCorrect = (answer === data.correctAnswer);
+        answered = true;
+        submitInputBtn.disabled = true;
+
+        if (isCorrect) {
+            feedbackArea.className = 'feedback correct';
+            feedbackArea.innerHTML = `✅ 回答正确！`;
+        } else {
+            feedbackArea.className = 'feedback wrong';
+            feedbackArea.innerHTML = `❌ 回答错误。正确答案：${data.correctAnswer}`;
+        }
+
+        submitAnswer(answer);
+        nextBtn.disabled = false;
+        nextBtn.textContent = '等待下一题';
+    });
+
+    // ---- 提交答案 ----
+    function submitAnswer(answer) {
+        if (!mqttConnected || !studentName) return;
+        const payload = {
+            student: studentName,
+            answer: answer,
+            timestamp: Date.now()
+        };
+        try {
+            const msg = new Paho.MQTT.Message(JSON.stringify(payload));
+            msg.destinationName = TOPIC_STUDENT_ANSWER;
+            mqttClient.send(msg);
+            console.log('答案已提交:', payload);
+        } catch (e) {
+            console.warn('提交答案失败:', e);
+        }
+    }
+
+    // ---- 加入课堂 ----
+    function handleJoin() {
+        const name = studentNameInput.value.trim();
+        const code = classCodeInput.value.trim();
+        if (!name) {
+            joinMsg.textContent = '⚠️ 请输入你的姓名';
+            joinMsg.className = 'join-msg';
+            return;
+        }
+        let expectedCode = '';
+        try {
+            expectedCode = localStorage.getItem('pinyin_class_code') || '';
+        } catch (e) {}
+        if (expectedCode && code !== expectedCode) {
+            joinMsg.textContent = '⚠️ 课堂码错误，请重新输入';
+            joinMsg.className = 'join-msg';
+            return;
+        }
+
+        studentName = name;
+        displayStudentName.textContent = name;
+        updatePointsDisplay();
+
+        if (mqttConnected) {
+            const joinPayload = {
+                type: 'JOIN',
+                name: name
+            };
+            try {
+                const msg = new Paho.MQTT.Message(JSON.stringify(joinPayload));
+                msg.destinationName = TOPIC_STUDENT_JOIN;
+                mqttClient.send(msg);
+                console.log('加入消息已发送');
+            } catch (e) {
+                console.warn('发送加入消息失败:', e);
+            }
+        }
+
+        joinPage.classList.remove('active');
+        practicePage.classList.add('active');
+        joinMsg.textContent = `✅ 欢迎，${name}！等待教师发送题目...`;
+        joinMsg.className = 'join-msg success';
+
+        setInterval(updatePointsDisplay, 10000);
+    }
+
+    joinBtn.addEventListener('click', handleJoin);
+    studentNameInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleJoin(); });
+    classCodeInput.addEventListener('keydown', e => { if (e.key === 'Enter') handleJoin(); });
+
+    // ---- 下一题（重置提交按钮状态） ----
+    nextBtn.addEventListener('click', function() {
+        // 重置提交按钮状态，以便下一题输入模式可以正常点击
+        submitInputBtn.disabled = false;
+        inputAnswer.value = '';
+        this.disabled = true;
+        this.textContent = '等待下一题...';
+        feedbackArea.className = 'feedback';
+        feedbackArea.innerHTML = '💡 等待教师发送下一题...';
+        optionsGrid.innerHTML = '';
+        inputArea.classList.add('hidden');
+        questionArea.innerHTML = '<div class="hint-text">等待下一道题目...</div>';
+        answered = false;
+    });
+
+    // ---- 初始化 ----
+    connectMQTT();
+    const savedName = localStorage.getItem('pinyin_student_name') || '';
+    if (savedName) {
+        studentNameInput.value = savedName;
+        studentName = savedName;
+    }
+
+    window.addEventListener('storage', function(e) {
+        if (e.key === 'pinyin_students') {
+            updatePointsDisplay();
+        }
+    });
+
+    console.log('📗 学生端已加载（提交按钮重置修复）');
+</script>
+</body>
+</html>
